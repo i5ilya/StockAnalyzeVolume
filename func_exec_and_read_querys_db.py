@@ -4,7 +4,7 @@ import yfinance as yf
 
 def query_create_table(table_name):
     return f"""
-    CREATE TABLE IF NOT EXISTS {table_name} (
+    CREATE TABLE IF NOT EXISTS "{table_name}" (
     Date timestamp,
     Open double precision,
     High double precision,
@@ -17,7 +17,7 @@ def query_create_table(table_name):
 
 def query_delete_duplicates(ticket, row):
     return f"""
-        DELETE FROM {ticket} WHERE ctid NOT IN (SELECT max(ctid) FROM {ticket} GROUP BY {row});
+        DELETE FROM "{ticket}" WHERE ctid NOT IN (SELECT max(ctid) FROM "{ticket}" GROUP BY {row});
         """
 
 def execute_query(conn, query):
@@ -69,7 +69,7 @@ def copy_from_stringio(conn, df, table):
 
     cursor = conn.cursor()
     try:
-        cursor.copy_from(buffer, table, sep=",")
+        cursor.copy_from(buffer, f"{table}", sep=",")
         conn.commit()
     except (Exception, psycopg2.DatabaseError) as error:
 
