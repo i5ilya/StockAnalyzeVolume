@@ -63,9 +63,9 @@ for symbol in symbols:
     if symbol not in symbols_in_db_after_all:
         left_after_all.append(symbol)
 
-if not problem_with_data_load:
+if len(problem_with_data_load) != 0:
     print(f'Какие-то проблемы с загрузкой: {problem_with_data_load}')
 
-if not symbols_in_db_after_all:
+if len(symbols_in_db_after_all) != 0:
     print(f'Все еще остались не загружены и не созданы в БД {left_after_all}')
-
+conn.close()

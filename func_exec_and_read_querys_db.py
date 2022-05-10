@@ -2,6 +2,7 @@ from io import StringIO
 import psycopg2.extras
 import yfinance as yf
 
+
 def query_create_table(table_name):
     return f"""
     CREATE TABLE IF NOT EXISTS "{table_name}" (
@@ -15,10 +16,12 @@ def query_create_table(table_name):
     )
     """
 
+
 def query_delete_duplicates(ticket, row):
     return f"""
         DELETE FROM "{ticket}" WHERE ctid NOT IN (SELECT max(ctid) FROM "{ticket}" GROUP BY {row});
         """
+
 
 def execute_query(conn, query):
     # connection.autocommit = True
@@ -27,15 +30,18 @@ def execute_query(conn, query):
     try:
         cursor.execute(query)
         conn.commit()
-        print(conn.notices)
-        print(cursor.statusmessage)
+        if len(conn.notices) != 0:
+            print(conn.notices)
+        if len(cursor.statusmessage) != 0:
+            print(cursor.statusmessage)
         print("Query executed successfully")
     except (Exception, psycopg2.DatabaseError) as error:
         print(f"The error '{error}' occurred")
     cursor.close()
 
+
 def read_query_all(conn, query):
-    #cursor = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
+    # cursor = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
     cursor = conn.cursor()
     result = None
     try:
@@ -45,6 +51,7 @@ def read_query_all(conn, query):
     except (Exception, psycopg2.DatabaseError) as error:
         print(f"The error '{error}' occurred")
     cursor.close()
+
 
 def read_query_one(conn, query):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
@@ -56,6 +63,7 @@ def read_query_one(conn, query):
     except (Exception, psycopg2.DatabaseError) as error:
         print(f"The error '{error}' occurred")
     cursor.close()
+
 
 def copy_from_stringio(conn, df, table):
     """
@@ -77,8 +85,9 @@ def copy_from_stringio(conn, df, table):
         conn.rollback()
         cursor.close()
         return 1
-    print("copy_from_stringio() done")
+    print("Copy from stringio to DB done")
     cursor.close()
+
 
 def dl_data_yf_period(ticket, start_time, end_time):
     data = None
