@@ -41,8 +41,8 @@ def execute_query(conn, query):
 
 
 def read_query_all(conn, query):
-    # cursor = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
+    # cursor = conn.cursor()
     result = None
     try:
         cursor.execute(query)

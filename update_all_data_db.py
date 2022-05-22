@@ -9,20 +9,13 @@ from datetime import datetime
 import datetime
 import time
 
-conn = connect()
 
-symbols_in_db_raw = read_query_all(conn, query_get_list_of_tables)
-symbols_sp500raw = read_query_all(conn, 'SELECT symbol FROM sp500_list')
 
 
 def normalise_lists_from_db(raw_list):
     return [item[0].lower() for item in raw_list]
 
-symbols_sp500 = normalise_lists_from_db(symbols_sp500raw)
-symbols_now_in_db = normalise_lists_from_db(symbols_in_db_raw)
 
-
-problem_with_data_load = []
 
 
 def dl_data_from_yahoo_to_db(symbols_to_dl, symbols_in_db):
@@ -65,20 +58,32 @@ def dl_data_from_yahoo_to_db(symbols_to_dl, symbols_in_db):
                 print(f'Данные {symbol} в БД актуальны и не требуют загрузки')
 
 
+if __name__ == '__main__':
 
-dl_data_from_yahoo_to_db(symbols_sp500, symbols_now_in_db)
+    conn = connect()
 
-symbols_in_db_raw_after_all = read_query_all(conn, query_get_list_of_tables)
-symbols_in_db_after_all = normalise_lists_from_db(symbols_in_db_raw_after_all)
+    symbols_in_db_raw = read_query_all(conn, query_get_list_of_tables)
+    symbols_sp500raw = read_query_all(conn, 'SELECT symbol FROM sp500_list')
 
-left_after_all = []
-for item in symbols_sp500:
-    if item not in symbols_in_db_after_all:
-        left_after_all.append(item)
+    symbols_sp500 = normalise_lists_from_db(symbols_sp500raw)
+    symbols_now_in_db = normalise_lists_from_db(symbols_in_db_raw)
 
-if len(problem_with_data_load) != 0:
-    print(f'Какие-то проблемы с загрузкой: {problem_with_data_load}')
+    problem_with_data_load = []
 
-if len(symbols_in_db_after_all) != 0:
-    print(f'Все еще остались не загружены и не созданы в БД {left_after_all}')
-conn.close()
+
+    dl_data_from_yahoo_to_db(symbols_sp500, symbols_now_in_db)
+
+    symbols_in_db_raw_after_all = read_query_all(conn, query_get_list_of_tables)
+    symbols_in_db_after_all = normalise_lists_from_db(symbols_in_db_raw_after_all)
+
+    left_after_all = []
+    for item in symbols_sp500:
+        if item not in symbols_in_db_after_all:
+            left_after_all.append(item)
+
+    if len(problem_with_data_load) != 0:
+        print(f'Какие-то проблемы с загрузкой: {problem_with_data_load}')
+
+    if len(symbols_in_db_after_all) != 0:
+        print(f'Все еще остались не загружены и не созданы в БД {left_after_all}')
+    conn.close()

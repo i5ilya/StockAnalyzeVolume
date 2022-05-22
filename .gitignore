@@ -1,0 +1,5 @@
+/venv/
+/.idea/
+history
+history_crypto
+*.csv
