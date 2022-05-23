@@ -10,16 +10,11 @@ import datetime
 import time
 
 
-
-
 def normalise_lists_from_db(raw_list):
     return [item[0].lower() for item in raw_list]
 
 
-
-
 def dl_data_from_yahoo_to_db(symbols_to_dl, symbols_in_db):
-
     for symbol in symbols_to_dl:
         if symbol not in symbols_in_db:
             print(f'Символа {symbol}, нет в базе данных, скачиваем...')
@@ -69,7 +64,6 @@ if __name__ == '__main__':
     symbols_now_in_db = normalise_lists_from_db(symbols_in_db_raw)
 
     problem_with_data_load = []
-
 
     dl_data_from_yahoo_to_db(symbols_sp500, symbols_now_in_db)
 
