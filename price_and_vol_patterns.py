@@ -1,10 +1,13 @@
+import pandas as pd
+
+
 def volume_price_level_calc(pd_df):
-    '''
+    """
     Функция находит уровень цен (минимальная цена и максимальная)
     в котором находится наибольший проторгованный объем.
     :param pd_df: На входе pandas dataframe.
     :return: На выходе: два числа float - минимум и максимум цен, которые образуют в дальнейшем уровень цен.
-    '''
+    """
     #  Делаем копию dataframe
     pd_df = pd_df.copy()
     #  Создаем новый столбец 'Price Groups', в котором все цены будут поделены на группы (количество групп: bins=30)
@@ -16,6 +19,6 @@ def volume_price_level_calc(pd_df):
     #  Делаем табличку short с тремя верхними диапазонами, которые имеют самые большие объемы
     short = sorted_pd_df.head(3)
     #  Выбираем нижнюю и верхнюю границы этих трех диапазонов цен
-    maxprice = short['Price Groups'].max()
-    minprice = short['Price Groups'].min()
-    return minprice.left, maxprice.right
+    max_price = short['Price Groups'].max()
+    min_price = short['Price Groups'].min()
+    return min_price.left, max_price.right
