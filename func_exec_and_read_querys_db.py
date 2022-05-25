@@ -89,10 +89,26 @@ def copy_from_stringio(conn, df, table):
     cursor.close()
 
 
-def dl_data_yf_period(ticket, start_time, end_time):
+# def dl_data_yf_period(ticket, start_time, end_time):
+#     data = None
+#     try:
+#         data = yf.download(ticket, start=start_time, end=end_time)
+#         return data
+#     except Exception as error:
+#         print(f"The error '{error}' occurred")
+
+
+def dl_data_yf_period(ticket, start_time, end_time, timeframe:str ='1d'):
+    '''
+    :param ticket: from Yahoo Finance
+    :param start_time: Date start
+    :param end_time: Date end
+    :param timeframe: valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+    :return: pandas dataframe
+    '''
     data = None
     try:
-        data = yf.download(ticket, start=start_time, end=end_time)
+        data = yf.download(ticket, start=start_time, end=end_time, interval=timeframe)
         return data
     except Exception as error:
         print(f"The error '{error}' occurred")
