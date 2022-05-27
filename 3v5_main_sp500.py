@@ -18,8 +18,8 @@ def find_key_by_value_in_dic(some_dict: Dict, value):
     return list(some_dict.keys())[list(some_dict.values()).index(value)]
 
 
-def get_data(from_date, ticket: str):
-    return read_query_all(conn, f"""select date, volume from "{ticket}" where date > '{from_date}'""")
+def get_data(from_date, ticket: str, tf):
+    return read_query_all(conn, f"""select date, volume from "{ticket}_{tf}" where date > '{from_date}'""")
 
 
 def make_a_dic_simple(data_from_db) -> Dict:
@@ -40,7 +40,7 @@ def average_value(some_list_of_value: List):
 
 if __name__ == '__main__':
     for ticket in sp500list:
-        dataset_dic = make_a_dic_simple(get_data(date_6m_ago, ticket))
+        dataset_dic = make_a_dic_simple(get_data(date_6m_ago, ticket, '1d'))
         volumes = list_of_values_from_dic(dataset_dic)
         average_volume = average_value(volumes)
         for value in volumes[-20:-1]:
