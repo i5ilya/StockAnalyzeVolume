@@ -109,6 +109,8 @@ def dl_data_yf_period(ticket, start_time, end_time, timeframe: str ='1d'):
     data = None
     try:
         data = yf.download(ticket, start=start_time, end=end_time, interval=timeframe)
-        return data.dropna()
+        data = data.dropna()
+        data = data.astype({'Volume': 'int'})
+        return data
     except Exception as error:
         print(f"The error '{error}' occurred")
