@@ -1,22 +1,52 @@
 import pandas as pd
-from connection_to_db import connect
+from connection import Tables
 import datetime
-from func_exec_and_read_querys_db import read_query_all, read_query_one
-from queries import query_get_list_of_tables
 from typing import *
 from price_and_vol_patterns import volume_price_level_calc
-from update_all_data_db import normalise_lists_from_db, dl_data_to_db
+from queries import query_get_list_of_tables, query_create_table
+from func_exec_and_read_querys_db import dl_data_yf_period, query_delete_duplicates
 import matplotlib.pyplot as plt
 import mplfinance as mpf
 
 # connect to db
-conn = connect()
+# conn = connect()
+db = Tables('SP500')
 
 # get data 6 month ago
 date_6m_ago = datetime.date.today() - datetime.timedelta(days=180)
 
+
+def normalise_lists_from_db(raw_list):
+    return [item[0].lower() for item in raw_list]
+
+
 # get list of sp500 tables from db
-sp500list = normalise_lists_from_db(read_query_all(conn, 'SELECT symbol FROM sp500_list'))
+sp500list = normalise_lists_from_db(db.fetch_all('SELECT symbol FROM sp500_list'))
+
+
+def dl_data_to_db(symbol, symbols_in_database, date_from, date_to, tf='1d'):
+    """
+    Функция создания таблицы и загрузки данных в БД из yahoofinance
+    :param symbols_in_database: таблицы в БД
+    :param symbol который хотим загрузить
+    :param date_from: с какой даты
+    :param date_to: по какую дату
+    :param tf: таймфрейм
+    :return: ничего не возвращает, а делает запись в БД, с созданием таблицы, если ее нет.
+    """
+    df = dl_data_yf_period(symbol, date_from, date_to, tf)
+    if symbol + '_' + tf in symbols_in_database:
+        print(f'Заполняем таблицу данными {symbol}_{tf}...')
+        db.copy_from_stringio(df, symbol + '_' + tf)
+        print(f'Удаляем возможные дубли в базе {symbol}_{tf}')
+        db.execute_query(query_delete_duplicates(symbol + '_' + tf, 'date'))
+    else:
+        print(f'Создаем таблицу {symbol}_{tf}...')
+        db.execute_query(query_create_table(symbol + '_' + tf))
+        print(f'Заполняем таблицу данными {symbol}_{tf}...')
+        db.copy_from_stringio(df, symbol + '_' + tf)
+        print(f'Удаляем возможные дубли в базе {symbol}_{tf}')
+        db.execute_query(query_delete_duplicates(symbol + '_' + tf, 'date'))
 
 
 def find_key_by_value_in_dic(some_dict: Dict, value):
@@ -24,7 +54,7 @@ def find_key_by_value_in_dic(some_dict: Dict, value):
 
 
 def get_data(from_date, ticket: str, tf):
-    return read_query_all(conn, f"""select date, volume from "{ticket}_{tf}" where date > '{from_date}'""")
+    return db.fetch_all(f"""select date, volume from "{ticket}_{tf}" where date > '{from_date}'""")
 
 
 def make_a_dic_simple(data_from_db) -> Dict:
@@ -82,14 +112,13 @@ def check_and_dl_5m_data_yf(ticket: str, from_date, to_date, tf: str):
     :param tf:
     :return:
     """
-    symbols_in_db = normalise_lists_from_db(read_query_all(conn, query_get_list_of_tables))
+    symbols_in_db = normalise_lists_from_db(db.fetch_all(query_get_list_of_tables))
     if ticket + '_' + tf in symbols_in_db:
-        date_db = read_query_one(conn,
-                                 f"""select date from "{ticket}_{tf}" where date BETWEEN '{from_date}' AND '{to_date}'""")
-        if date_db is None:
-            dl_data_to_db(ticket, symbols_in_db, from_date, to_date, tf='5m')
-        else:
+        date_db = db.fetch_all(f"""select date from "{ticket}_{tf}" where date BETWEEN '{from_date}' AND '{to_date}'""")
+        if date_db:
             print(f'Данные по {ticket}_{tf} да дату {from_date} есть в БД')
+        else:
+            dl_data_to_db(ticket, symbols_in_db, from_date, to_date, tf='5m')
     else:
         dl_data_to_db(ticket, symbols_in_db, from_date, to_date, tf='5m')
 
@@ -115,8 +144,7 @@ def convert_data_from_db_to_pandas_df(raw_data_from_db):
 
 
 def get_data_all_columns(ticket: str, tf: str, from_date, to_date=datetime.date.today()):
-    data_from_db = read_query_all(conn,
-                                  f"""select * from "{ticket}_{tf}" where date BETWEEN '{from_date}' AND '{to_date}'""")
+    data_from_db = db.fetch_all(f"""select * from "{ticket}_{tf}" where date BETWEEN '{from_date}' AND '{to_date}'""")
     if data_from_db:
         return data_from_db
     else:
@@ -138,7 +166,7 @@ def make_dic_key_and_2_list_values(dic_key_and_list_values):
             # забираем м5 данные из базы, конвертируем в pandas dataframe
             df = convert_data_from_db_to_pandas_df(
                 get_data_all_columns(key.lower(), '5m', convert_str_to_dt(item), date_plus_one_day))
-            if not df.empty:
+            if df is not None and not df.empty:
                 # и высчитываем уровень, добавляя в список уровней
                 list_of_prices.extend(volume_price_level_calc(df))
             else:
@@ -165,23 +193,45 @@ if __name__ == '__main__':
         volumes = list_of_values_from_dic(dataset_dic)
         average_volume = average_value(volumes)
 
-        for value in volumes[-35:-1]:
+        for value in volumes[-20:-1]:
             if value >= average_volume * 3:
                 # print(ticket.upper(), find_key_by_value_in_dic(dataset_dic, value))
                 list_of_dic.append({ticket.upper(): [find_key_by_value_in_dic(dataset_dic, value)]})
 
+    good_dict = make_dic_key_and_list_of_values(list_of_dic)
+
+    try:
+        print('Показать список акций с датами дней и для проверки или загрузки 5м данных в базу данных нажмите 1')
+        print('Для создания изображений нажмите 2')
+        value = int(input('Введите число: '))
+        if value == 1:
+            print(make_dic_key_and_list_of_values(list_of_dic))
+            dl_5m_to_db_from_dic(good_dict)
+        if value == 2:
+            result = make_dic_key_and_2_list_values(good_dict)
+            print(result)
+            for key, value in result.items():
+                data = convert_data_from_db_to_pandas_df(get_data_all_columns(key.lower(), '1d', date_6m_ago))
+                mplfinance_plotter(key, data, value[1], value[0])
+        #if value == 3:
+
+        else:
+            print('Ничего не делаем')
+    except ValueError:
+        print('Введены не цифры: ')
+
     # print(list_of_dic)
     # print(make_dic_key_and_list_of_values(list_of_dic))
-    good_dict = make_dic_key_and_list_of_values(list_of_dic)
-    print(good_dict)
+    # good_dict = make_dic_key_and_list_of_values(list_of_dic)
+    # print(good_dict)
 
-    dl_5m_to_db_from_dic(good_dict)
-    result = make_dic_key_and_2_list_values(good_dict)
-    print(result)
-    for key, value in result.items():
-        # print(key, value[0])
-        data = convert_data_from_db_to_pandas_df(get_data_all_columns(key.lower(), '1d', date_6m_ago))
-        mplfinance_plotter(key, data, value[1], value[0])
+    # dl_5m_to_db_from_dic(good_dict)
+    # result = make_dic_key_and_2_list_values(good_dict)
+    # print(result)
+    # for key, value in result.items():
+    #     # print(key, value[0])
+    #     data = convert_data_from_db_to_pandas_df(get_data_all_columns(key.lower(), '1d', date_6m_ago))
+    #     mplfinance_plotter(key, data, value[1], value[0])
 
     # check_and_dl_5m_data_yf('bll', '2022-05-13', '2022-05-14', '5m')
 
@@ -197,7 +247,6 @@ if __name__ == '__main__':
     #     for item in value:
     #         date_plus_one_date = convert_str_to_dt(item) + datetime.timedelta(
     #             days=1)
-    #         df = convert_data_from_db_to_pandas_df(get_data_all_columns(key.lower(), '5m', convert_str_to_dt(item), date_plus_one_date))
     #         l.extend(volume_price_level_calc(df))
     #     dic1[key] = dic1[key], l
     # print(dic1['DISH'][1])
