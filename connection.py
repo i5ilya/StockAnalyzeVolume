@@ -61,7 +61,6 @@ class Tables(Database):
             return result
         except (Exception, psycopg2.DatabaseError) as error:
             print(f"The error '{error}' occurred")
-        self.cursor.close()
 
     def fetch_all(self, query):
         result = None
@@ -71,7 +70,6 @@ class Tables(Database):
             return result
         except (Exception, psycopg2.DatabaseError) as error:
             print(f"The error '{error}' occurred")
-        self.cursor.close()
 
     def execute_query(self, query):
         try:
@@ -84,7 +82,6 @@ class Tables(Database):
             print("Query executed successfully")
         except (Exception, psycopg2.DatabaseError) as error:
             print(f"The error '{error}' occurred")
-        self.cursor.close()
 
     def copy_from_stringio(self, df, table):
         """
@@ -99,13 +96,17 @@ class Tables(Database):
             self.cursor.copy_from(buffer, f"{table}", sep=",")
             self.conn.commit()
         except (Exception, psycopg2.DatabaseError) as error:
-
             print(f"The error '{error}' occurred")
             self.conn.rollback()
-            self.cursor.close()
             return 1
         print("Copy from stringio to DB done")
+
+    def __del__(self):
         self.cursor.close()
+        print('Cursor closed')
+        self.conn.close()
+        print('Connection closed')
+
 
 
 if __name__ == '__main__':

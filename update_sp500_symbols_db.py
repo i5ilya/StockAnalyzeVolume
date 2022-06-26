@@ -1,4 +1,4 @@
-from connection_to_db import connect
+from connection import connect
 from func_exec_and_read_querys_db import read_query_all, execute_query, copy_from_stringio
 import pandas as pd
 
