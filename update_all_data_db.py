@@ -1,4 +1,4 @@
-from connection_to_db import connect
+from connection import Tables
 from queries import query_get_list_of_tables
 from func_exec_and_read_querys_db import read_query_all, execute_query, copy_from_stringio, read_query_one, \
     dl_data_yf_period, query_delete_duplicates
@@ -9,8 +9,8 @@ from datetime import datetime
 import datetime
 import time
 
-conn = connect()
 
+db = Tables('SP500')
 
 def normalise_lists_from_db(raw_list):
     return [item[0].lower() for item in raw_list]
@@ -67,16 +67,16 @@ def dl_data_to_db(symbol, symbols_in_database, date_from, date_to, tf='1d'):
     df = dl_data_yf_period(symbol, date_from, date_to, tf)
     if symbol + '_' + tf in symbols_in_database:
         print(f'Заполняем таблицу данными {symbol}_{tf}...')
-        copy_from_stringio(conn, df, symbol + '_' + tf)
+        db.copy_from_stringio(df, symbol + '_' + tf)
         print(f'Удаляем возможные дубли в базе {symbol}_{tf}')
-        execute_query(conn, query_delete_duplicates(symbol + '_' + tf, 'date'))
+        db.execute_query(query_delete_duplicates(symbol + '_' + tf, 'date'))
     else:
         print(f'Создаем таблицу {symbol}_{tf}...')
-        execute_query(conn, query_create_table(symbol + '_' + tf))
+        db.execute_query(query_create_table(symbol + '_' + tf))
         print(f'Заполняем таблицу данными {symbol}_{tf}...')
-        copy_from_stringio(conn, df, symbol + '_' + tf)
+        db.copy_from_stringio(df, symbol + '_' + tf)
         print(f'Удаляем возможные дубли в базе {symbol}_{tf}')
-        execute_query(conn, query_delete_duplicates(symbol + '_' + tf, 'date'))
+        db.execute_query(query_delete_duplicates(symbol + '_' + tf, 'date'))
 
 
 def dl_and_update_d1_data(symbols_to_dl, symbols_in_database):
@@ -87,7 +87,7 @@ def dl_and_update_d1_data(symbols_to_dl, symbols_in_database):
             dl_data_to_db(symbol, symbols_in_database, datetime.date.today() - datetime.timedelta(days=180),
                           datetime.date.today())
         else:
-            last_date_raw = read_query_one(conn, f'SELECT max(date) FROM "{symbol}_{tf}"')
+            last_date_raw = db.fetch_one(f'SELECT max(date) FROM "{symbol}_{tf}"')
             last_date = last_date_raw[0].date()
             if last_date is None:
                 print(f'База данных {symbol}_{tf} существует, но она пустая! Пробуем скачать данные еще раз...')
@@ -106,7 +106,7 @@ def dl_and_update_d1_data(symbols_to_dl, symbols_in_database):
 
 def check_for_empty_table(table_name):
     if table_name != "sp500_list":
-        lastdate_in_table = read_query_one(conn, f'SELECT max(date) FROM "{table_name}"')
+        lastdate_in_table = db.fetch_one(f'SELECT max(date) FROM "{table_name}"')
         if lastdate_in_table is not None:
             return False
         else:
@@ -115,12 +115,12 @@ def check_for_empty_table(table_name):
 
 if __name__ == '__main__':
 
-    symbols_sp500 = normalise_lists_from_db(read_query_all(conn, 'SELECT symbol FROM sp500_list'))
-    symbols_in_db = normalise_lists_from_db(read_query_all(conn, query_get_list_of_tables))
+    symbols_sp500 = normalise_lists_from_db(db.fetch_all('SELECT symbol FROM sp500_list'))
+    symbols_in_db = normalise_lists_from_db(db.fetch_all(query_get_list_of_tables))
 
     dl_and_update_d1_data(symbols_sp500, symbols_in_db)
 
-    symbols_in_db_after_load = normalise_lists_from_db(read_query_all(conn, query_get_list_of_tables))
+    symbols_in_db_after_load = normalise_lists_from_db(db.fetch_all(query_get_list_of_tables))
 
     list_of_empty_tables = [check_for_empty_table(items) for items in symbols_in_db_after_load if
                             check_for_empty_table(items)]
@@ -134,4 +134,4 @@ if __name__ == '__main__':
 
     # if len(list_tables_not_in_db) != 0:
     #    print(f'Все еще остались не созданы в БД {list_tables_not_in_db}')
-    conn.close()
+
