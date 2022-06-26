@@ -1,5 +1,7 @@
 import psycopg2
 from io import StringIO
+
+
 # Connection parameters
 
 def connect():
@@ -9,12 +11,13 @@ def connect():
         # connect to the PostgreSQL server
         print('Connecting to the PostgreSQL database...')
         conn = psycopg2.connect(dbname='SP500', user='postgres',
-                         password='syncmaster', host='localhost')
+                                password='syncmaster', host='localhost')
         print("Connection to PostgreSQL DB successful")
         return conn
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         # sys.exit(1)
+
 
 class Database:
 
@@ -103,6 +106,7 @@ class Tables(Database):
             return 1
         print("Copy from stringio to DB done")
         self.cursor.close()
+
 
 if __name__ == '__main__':
     conn = connect()  # connect to the database
