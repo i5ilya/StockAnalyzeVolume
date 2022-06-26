@@ -109,7 +109,7 @@ class Tables(Database):
 
 
 
-if __name__ == '__main__':
-    conn = connect()  # connect to the database
-    cursor = conn.cursor()
-    conn.close()  # close the connection
+# if __name__ == '__main__':
+#     conn = connect()  # connect to the database
+#     cursor = conn.cursor()
+#     conn.close()  # close the connection
