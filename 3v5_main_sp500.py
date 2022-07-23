@@ -54,7 +54,7 @@ def find_key_by_value_in_dic(some_dict: Dict, value):
 
 
 def get_data(from_date, ticket: str, tf):
-    return db.fetch_all(f"""select date, volume from "{ticket}_{tf}" where date > '{from_date}'""")
+    return db.fetch_all(f"""select date, volume from "{ticket}_{tf}" where date > '{from_date}' ORDER BY date asc""")
 
 
 def make_a_dic_simple(data_from_db) -> Dict:
