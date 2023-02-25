@@ -45,12 +45,8 @@ def dl_and_update_d1_data(symbols_to_dl, symbols_in_database):
                           datetime.date.today())
         else:
             last_date_raw = db.fetch_one(f'SELECT max(date) FROM "{symbol}_{tf}"')
-            last_date = last_date_raw[0].date()
-            if last_date is None:
-                print(f'База данных {symbol}_{tf} существует, но она пустая! Пробуем скачать данные еще раз...')
-                dl_data_to_db(symbol, symbols_in_database, datetime.date.today() - datetime.timedelta(days=180),
-                              datetime.date.today())
-            else:
+            if last_date_raw[0]:
+                last_date = last_date_raw[0].date()
                 if last_date != datetime.date.today() and last_date != datetime.date.today() - datetime.timedelta(
                         days=1):
                     print(f'База данных {symbol}_{tf} содержит последнюю запись от {last_date}')
@@ -59,7 +55,10 @@ def dl_and_update_d1_data(symbols_to_dl, symbols_in_database):
                 else:
                     print(f'База данных {symbol}_{tf} содержит последнюю запись от {last_date}')
                     print(f'Данные {symbol}_{tf} в БД актуальны и не требуют загрузки')
-
+            else:
+                print(f'База данных {symbol}_{tf} существует, но она пустая! Пробуем скачать данные еще раз...')
+                dl_data_to_db(symbol, symbols_in_database, datetime.date.today() - datetime.timedelta(days=180),
+                                  datetime.date.today())
 
 def check_for_empty_table(table_name):
     if table_name != "sp500_list":
